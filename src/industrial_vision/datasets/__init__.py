@@ -1,0 +1,1 @@
+"""Industrial inspection components."""

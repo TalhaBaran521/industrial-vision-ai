@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "industrial-vision-ai"
+version = "0.1.0"
+description = "Foundation for an industrial visual inspection research prototype."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["numpy>=2,<3", "Pillow>=13,<14", "opencv-python-headless>=5,<6", "streamlit>=1.40,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.11"]
+
+[project.scripts]
+industrial-vision = "industrial_vision.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
+
+[tool.ruff]
+target-version = "py311"
+extend-exclude = [".uv-cache", ".uv-python"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP"]
