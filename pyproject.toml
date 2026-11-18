@@ -8,10 +8,11 @@ version = "0.1.0"
 description = "Foundation for an industrial visual inspection research prototype."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["numpy>=2,<3", "Pillow>=13,<14", "opencv-python-headless>=5,<6", "streamlit>=1.40,<2"]
+dependencies = ["numpy>=2,<3", "Pillow>=13,<14", "opencv-python>=5,<6", "streamlit>=1.40,<2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.11"]
+ml = ["torch==2.11.0", "torchvision==0.26.0", "anomalib==2.2.0"]
 
 [project.scripts]
 industrial-vision = "industrial_vision.cli:main"

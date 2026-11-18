@@ -55,3 +55,19 @@ düzeyinde skor üretecek.
 CLI demo → SyntheticDatasetGenerator → InspectionService → ReferenceDifferenceDetector → draw_regions → InspectionArtifacts → save_inspection.
 
 Domain dataclass nesneleri yapılandırma, bölgeler ve JSON raporunu taşır. Büyük NumPy dizileri InspectionArtifacts içinde tutulur ve PNG olarak kaydedilir. Detector, UI ve dosya sisteminden bağımsızdır. Repository dosyaları geçici bir dizinde hazırlar, tamamlanan analiz dizinini benzersiz ID altında yayımlar. Girdi dosya adı yalnızca raporda saklanır. Sentetik ground truth detector tarafından kullanılmaz.
+
+## Phase 3 veri akışı
+
+Streamlit Dataset Explorer → DatasetLoader.scan → DatasetIndex → istatistikler ve bütünlük hataları. Seçilen DatasetSample, load_sample üzerinden RGB görüntü ve binary ground truth sağlar. Loader mevcut image_loader doğrulamasını kullanır. DatasetSample resmî split, kusur türü ve maskenin yolunu taşır. Dosyalar sıralanarak deterministik listeleme yapılır. Tarama sonucu oturuma özgü session_state içinde tutulur; farklı kök veya kategori seçildiğinde eski sonuç gösterilmez. Normal maskeler görüntü boyutunda sıfır olarak oluşturulur.
+
+## Phase 4 model akışı
+
+ml_cli → training_service.train → split_normal → PatchCoreDetector → Anomalib PatchcoreModel. Bölme yalnızca bottle/train/good yollarını kullanır. Training service normal özellikleri toplar, Anomalib coreset seçimini çağırır ve ayrılmış normal validation skorlarından eşik üretir. Model ve metadata geçici dizinde hazırlanıp benzersiz model dizinine taşınır. Tahmin komutu bu state_dict'i yeniden yükleyip görüntü skoru ve orijinal çözünürlükte sürekli anomali haritası üretir. Ağır bağımlılıklar yalnızca ML giriş noktasında yüklenir.
+
+## Phase 5 değerlendirme
+
+ml_cli evaluate → evaluation_service → DatasetLoader ve PatchCoreDetector → binary_metrics → JSON/CSV ve örnek PNG çıktıları. Veri bütünlüğü hatalarında değerlendirme durur. Eğitim/validation manifestlerinin ayrıklığı ve normal eğitim dizini içinde bulunması doğrulanır. Piksel kalibrasyonu yalnızca normal validation üzerinde yapılır. Test döngüsü görüntü ve piksel skorlarını karşılaştırır. Tamamlanan rapor geçici dizinden benzersiz çalışma dizinine yayımlanır.
+
+## Phase 5 değerlendirme akışı
+
+ML CLI evaluate → evaluation_service → kayıtlı PatchCore modeli ve DatasetLoader. Normal validation manifesti eğitimle çakışma ve kategori dışına çıkma açısından doğrulanır. Görüntü eşiği model metadata dosyasından alınır, piksel eşiği normal validation haritalarından hesaplanır. Test sonuçları ardından tek seferde ölçülür. Metrikler scikit-learn ile hesaplanır. Tamamlanan raporlar benzersiz run dizinine taşınır. JSON null ve CSV N/A tanımsız metrikleri belirtir.
