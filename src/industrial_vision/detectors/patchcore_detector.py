@@ -39,6 +39,17 @@ class PatchCoreDetector:
         """Load RGB, resize without cropping, and normalize with ImageNet statistics."""
         with path.open("rb") as source:
             image, _ = load_image(source.read(10_000_001))
+        return self.tensor_from_rgb(image)
+
+    def tensor_from_rgb(
+        self, image: np.ndarray
+    ) -> tuple[torch.Tensor, tuple[int, int]]:
+        """Prepare an in-memory RGB frame using the training preprocessing."""
+        from industrial_vision.vision.preprocessing import validate_image
+
+        validate_image(image)
+        if image.ndim != 3:
+            raise ValueError("Expected an RGB frame.")
         height, width = image.shape[:2]
         resized = cv2.resize(
             image, (self.image_size, self.image_size), interpolation=cv2.INTER_LINEAR
@@ -51,7 +62,13 @@ class PatchCoreDetector:
 
     def predict(self, path: Path) -> tuple[float, np.ndarray]:
         """Return raw distance score and continuous map in original image coordinates."""
-        tensor, shape = self.tensor(path)
+        with path.open("rb") as source:
+            image, _ = load_image(source.read(10_000_001))
+        return self.predict_rgb(image)
+
+    def predict_rgb(self, image: np.ndarray) -> tuple[float, np.ndarray]:
+        """Predict an RGB frame; CPU outputs synchronize CUDA work before return."""
+        tensor, shape = self.tensor_from_rgb(image)
         self.model.eval()
         with torch.inference_mode():
             prediction = self.model(tensor)

@@ -1,9 +1,25 @@
 # Industrial Vision AI
 
-Endüstriyel ürün görüntülerindeki yüzey kusurlarını ve normalden sapmaları
-incelemeyi hedefleyen bir araştırma ve portföy projesi. Mevcut Phase 0 sürümü
-Python paketini, komut satırı girişini, uygulama ayarlarını ve test altyapısını
-içerir.
+Endüstriyel görüntüler için Python tabanlı araştırma ve portföy prototipi. Görüntü ön işleme, referansla görsel fark analizi, MVTec AD keşfi, PatchCore eğitim/tahmini, bilimsel değerlendirme ve yerel video analizi içerir.
+
+## English overview
+
+Industrial Vision AI is a modular Python research prototype for industrial visual inspection. It combines OpenCV preprocessing, reference-based difference analysis, a Streamlit interface, and Anomalib PatchCore trained on normal MVTec AD bottle images. Training, validation and test data are separated. Reports include image-level and pixel-level metrics, failure examples and measured video latency. The current model is category-specific and requires further validation for industrial deployment.
+
+## Hızlı başlangıç
+
+Python 3.11 sanal ortamını aşağıdaki komutlarla kurduktan sonra Streamlit uygulamasını açın.
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1
+.\.venv\Scripts\industrial-vision.exe demo --seed 42
+```
+
+Temel kurulum ön işleme, Dataset Explorer ve sentetik demo için yeterlidir. PatchCore ekranı için ML bağımlılıklarını kurup bottle modelini eğitim komutuyla oluşturun. Model ve veri dosyaları yerel olarak hazırlanır.
+
+![Sentetik görsel fark analizi](docs/media/classical-inspection.png)
+
+[8 saniyelik sentetik demo](docs/media/classical-demo.mp4) · [Model Card](docs/model_card.md) · [Gerçek deney sonuçları](docs/experiments.md) · [Doğrulama ve performans](docs/release_validation.md) · [Bağımlılıklar](docs/dependencies.md)
 
 ## Kurulum
 
@@ -41,8 +57,7 @@ kopyalayın, kopyadaki `log_level` değerini `"DEBUG"` yapın ve dosyayı
 
 ## Mimari ve bağımlılıklar
 
-Paket `src/industrial_vision` altında yer alır. Phase 0 çalışma zamanında Python
-standart kütüphanesini kullanır. Paketleme için setuptools, geliştirme için
+Paket `src/industrial_vision` altında yer alır. Temel çalışma zamanı NumPy, Pillow, OpenCV ve Streamlit kullanır. Paketleme için setuptools, geliştirme için
 `dev` ek bağımlılıkları olan pytest ve Ruff kullanılır. Katmanlar ve veri akışı
 [mimari belgesinde](docs/architecture.md) açıklanmıştır.
 
@@ -115,3 +130,28 @@ Komut modelin kayıtlı görüntü eşiğini kullanır. Piksel eşiği, metadata
 Bütün test görüntüleri için image AUROC, Average Precision, Precision, Recall, F1 ve confusion matrix hesaplanır. Piksel metrikleri orijinal çözünürlükteki tüm test pikselleri birleştirilerek hesaplanır; örnekleme yapılmaz. Pixel AUROC/AP ile belirlenen piksel eşiğinde IoU ve Dice raporlanır. Bu toplu hesap birkaç GB RAM kullanabilir. Görüntü ve piksel görevlerinin metrikleri ayrı raporlanır. Tanımsız değerler JSON'da null, CSV'de N/A olur. Confusion matrix sırası [[TN, FP], [FN, TP]] şeklindedir.
 
 Benzersiz outputs/evaluations/RUN_ID dizininde report.json, metrics.csv, predictions.csv ve her TP/FP/TN/FN grubu için en fazla üç örneğin orijinali, ground truth ve tahmin maskesi saklanır. Örnekler deterministik dosya sırasından seçilir; örneği bulunmayan grup boş listelenir. predictions.csv bütün hatalı örnekleri incelemek için kullanılabilir. Rapor model hash'i, model ayarları, seed, veri manifestleri, sürümler, cihaz, eşikler ve toplam süreyi içerir. Süre tarama, kalibrasyon ve metrik hesabını da içerir; inference benchmark değildir.
+
+## Phase 6 — Kullanıcı arayüzü
+
+`.\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1` ile açın. Ana sayfa ön işleme araçlarını ve sayfa bağlantılarını içerir. Image Inspection ekranında yerel models/patchcore içindeki modeli ve cihazı seçip PNG/JPEG yükleyin, Analyze image düğmesine basın. Orijinal, heatmap ve overlay ile skor, eşik, karar ve işlem süresi gösterilir. Overlay PNG, JSON raporu ve ham NPY haritası indirilebilir. Model her oturumda ayrı tutulur; indirilecek görüntüler ortak cache'e yazılmaz.
+
+Heatmap renkleri görüntüye özel 0–maksimum ham mesafe aralığındadır. Farklı görüntülerin renkleri doğrudan karşılaştırılmamalıdır. Görüntü kararı kayıtlı validation eşiğine dayanır. Tek görüntü analizinde piksel eşiği uygulanmaz. Experiment Results sayfası kayıtlı değerlendirmeleri, iki düzeyde metrikleri, confusion matrix ve TP/FP/TN/FN örneklerini gösterir. Buradaki predicted mask değerlendirme raporundaki piksel eşiğini kullanır. JSON ve CSV raporları indirilebilir. Dataset Explorer üzerinden veri ve ground truth incelenebilir.
+
+## Phase 7 — Kamera ve video analizi
+
+```powershell
+.venv/Scripts/python.exe -m industrial_vision.ml_cli video --model models/patchcore/51ad27ecf5134c64abddbdb9cd2ba44e --camera 0
+.venv/Scripts/python.exe -m industrial_vision.ml_cli video --model models/patchcore/51ad27ecf5134c64abddbdb9cd2ba44e --video C:/videos/inspection.mp4 --headless --max-frames 100
+```
+
+Yerel OpenCV penceresinde Q, Esc veya pencereyi kapatma ile çıkın. Ctrl+C de kaynağı serbest bırakır. Kamera seçimi fiziksel kamerayı açar. `--headless` pencere oluşturmaz. `--device cpu` desteklenir. Model bottle verisiyle eğitilmiştir; genel webcam sahneleri için geçerlilik iddiası yoktur.
+
+Frame BGR'den RGB'ye çevrilir ve eğitimle aynı ön işleme uygulanır. Frame dosyaya yazılmadan predict_rgb üzerinden işlenir. İlk frame üzerinde üç warm-up tahmini ölçümden çıkarılır. Ortalama, p50/p95 read-to-result gecikmesi ve uçtan uca işlem FPS değeri outputs/video altında JSON'a kaydedilir. İlk ölçülen frame'in okuma süresi warm-up nedeniyle dışarıdadır. CUDA sonuçları CPU'ya alındığında senkronizasyon tamamlanır. FPS model yüklemesini ve warm-up süresini dışlar; görüntüleme ve normal frame okuma maliyetini içerir. Dosyalar azami işlem hızında okunur, kaynak FPS hızında oynatılmaz.
+
+Uygulama senkron çalışır ve okuduğu frameleri atlamaz. Kamera sürücüsü/buffer kaynaklı kayıp frame sayısı ölçülemediği için null raporlanır. Bu değer sıfır kayıp anlamına gelmez. JSON skorları frame sırasındadır. Harita renk ölçeği frame'e özel ham mesafedir. Video sonu, frame sınırı ve kullanıcı çıkışı raporlanır; kamera açma/okuma ve video çözme hataları açıklayıcı CLI hatası üretir. Her durumda capture kapatılır.
+
+## Portföy ekranı
+
+![Experiment Results ekranı](docs/media/experiment-results.png)
+
+Test sonuçları ve doğrulama sınırları [release raporunda](docs/release_validation.md) bulunur. Proje kaynak kodu lisansı henüz seçilmemiştir.

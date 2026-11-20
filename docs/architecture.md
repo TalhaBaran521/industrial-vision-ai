@@ -71,3 +71,34 @@ ml_cli evaluate → evaluation_service → DatasetLoader ve PatchCoreDetector �
 ## Phase 5 değerlendirme akışı
 
 ML CLI evaluate → evaluation_service → kayıtlı PatchCore modeli ve DatasetLoader. Normal validation manifesti eğitimle çakışma ve kategori dışına çıkma açısından doğrulanır. Görüntü eşiği model metadata dosyasından alınır, piksel eşiği normal validation haritalarından hesaplanır. Test sonuçları ardından tek seferde ölçülür. Metrikler scikit-learn ile hesaplanır. Tamamlanan raporlar benzersiz run dizinine taşınır. JSON null ve CSV N/A tanımsız metrikleri belirtir.
+
+## Phase 6 sunum katmanı
+
+Image Inspection → model_inspection.inspect_upload → PatchCoreDetector. Model oturuma özgü session_state içinde model yolu, cihaz ve model dosyasının değişiklik zamanı ile tutulur. Analiz çıktısı yüklenen dosyanın SHA256 değeriyle eşleştirilir. Geçici dosya tahmin tamamlandığında kaldırılır. PNG ve NPY export uygulama modülündedir. Experiment Results kayıtlı raporları salt okunur açar.
+
+## Phase 7 video akışı
+
+ML CLI video → realtime_service.run_video → OpenCV VideoCapture → BGR/RGB dönüşümü → PatchCoreDetector.predict_rgb → skor ve overlay. predict(path) aynı RGB tahmin yolunu kullanır. Senkron döngü warm-up, ölçüm, kullanıcı çıkışı ve finally içinde capture/pencere kapatılmasını yönetir. JSON ölçümleri CLI tarafından benzersiz dosyada saklanır. Fiziksel kamera buffer kayıpları ölçülemediğinden null olarak bildirilir.
+
+## Uygulanan sistem
+
+```mermaid
+flowchart TD
+    UI[Streamlit] --> Pre[Ön işleme]
+    UI --> Inspect[Görüntü analizi]
+    UI --> Explorer[Dataset Explorer]
+    UI --> Reports[Deney sonuçları]
+    CLI[CLI] --> Train[Eğitim servisi]
+    CLI --> Eval[Değerlendirme servisi]
+    CLI --> Video[Video servisi]
+    Inspect --> Patch[PatchCore adapter]
+    Train --> Patch
+    Eval --> Patch
+    Video --> Patch
+    Explorer --> Data[MVTec AD yükleyici]
+    Eval --> Data
+    Train --> Split[Normal eğitim/validation ayrımı]
+    Patch --> Model[Model state_dict ve metadata]
+    Eval --> JSON[JSON/CSV ve hata örnekleri]
+    Reports --> JSON
+```

@@ -51,7 +51,7 @@ if upload is not None:
         }
         result = operations[operation]()
         st.caption(
-            f"Source dimensions {metadata.width} × {metadata.height} · {metadata.format}"
+            f"Source dimensions {metadata.width} Ã— {metadata.height} · {metadata.format}"
         )
         left, right = st.columns(2)
         left.image(image, caption="Original (EXIF oriented)")

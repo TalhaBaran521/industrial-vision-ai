@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+import cv2
 import numpy as np
 
 
@@ -25,6 +26,15 @@ def main() -> None:
     evaluation.add_argument("--model", type=Path, required=True)
     evaluation.add_argument("--output", type=Path, default=Path("outputs/evaluations"))
     evaluation.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
+    video = commands.add_parser("video")
+    video.add_argument("--model", type=Path, required=True)
+    source = video.add_mutually_exclusive_group(required=True)
+    source.add_argument("--camera", type=int)
+    source.add_argument("--video", type=Path)
+    video.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
+    video.add_argument("--headless", action="store_true")
+    video.add_argument("--max-frames", type=int)
+    video.add_argument("--output", type=Path, default=Path("outputs/video"))
     commands.add_parser("device")
     for command in (fit, predict):
         command.add_argument(
@@ -63,6 +73,36 @@ def main() -> None:
                     args.image_size,
                 )
             )
+        elif args.command == "video":
+            from industrial_vision.application.realtime_service import run_video
+
+            if args.video is not None and not args.video.is_file():
+                raise ValueError("Video file does not exist.")
+            if args.camera is not None and args.camera < 0:
+                raise ValueError("Camera index must be nonnegative.")
+            detector, metadata = PatchCoreDetector.load(args.model, args.device)
+            report = run_video(
+                str(args.video) if args.video is not None else args.camera,
+                detector.predict_rgb,
+                metadata["threshold"],
+                not args.headless,
+                args.max_frames,
+            )
+            report.update(
+                {
+                    "model": str(args.model),
+                    "device": str(detector.device),
+                    "source": str(args.video)
+                    if args.video is not None
+                    else args.camera,
+                }
+            )
+            args.output.mkdir(parents=True, exist_ok=True)
+            destination = args.output / f"{uuid4().hex}.json"
+            destination.write_text(
+                json.dumps(report, indent=2, allow_nan=False), encoding="utf-8"
+            )
+            print(destination)
         elif args.command == "evaluate":
             from industrial_vision.application.evaluation_service import evaluate
 
@@ -86,7 +126,7 @@ def main() -> None:
                 json.dumps(report, indent=2, allow_nan=False), encoding="utf-8"
             )
             print(destination)
-    except (ImportError, OSError, ValueError, RuntimeError) as error:
+    except (ImportError, OSError, ValueError, RuntimeError, cv2.error) as error:
         parser.exit(1, f"Model operation failed: {error}\n")
 
 
